@@ -60,8 +60,8 @@ research_phase = ParallelAgent(
     sub_agents=[destination_agent, budget_agent]
 )
 itinerary_agent = LlmAgent(
-    name=ITINERARY_MODEL,
-    model="gemini-flash-latest",
+    name="itinerary_agent",
+    model=ITINERARY_MODEL,
     instruction=(
          "Write a trip plan using only the research below.\n\n"
         "DESTINATION RESEARCH:\n{destination_brief}\n\n"
