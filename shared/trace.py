@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Callable
@@ -31,6 +32,10 @@ def configure_logging(level: int = logging.INFO) -> None:
     # These are extremely chatty and would drown out our own trace.
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("google_genai").setLevel(logging.WARNING)
+    # ADK runs its own function-calling loop over generate_content, so the genai
+    # SDK warns on every call that we should be using AsyncChat.send_message
+    # instead. It's ADK-internal and not actionable from here — silence it.
+    logging.getLogger("google_genai.models").setLevel(logging.ERROR)
 
 
 @dataclass
@@ -45,28 +50,41 @@ class Call:
 # Ordered ledger of every traced call in this process.
 CALLS: list[Call] = []
 
+# Both SDKs run tools concurrently — ADK via ParallelAgent, the OpenAI SDK via
+# asyncio.gather plus asyncio.to_thread for sync tools. Numbering and appending
+# are two steps, so without this two tools can claim the same seq.
+_LOCK = threading.Lock()
+
 
 def reset() -> None:
     """Clear the ledger. Call between runs so counts stay meaningful."""
-    CALLS.clear()
+    with _LOCK:
+        CALLS.clear()
 
 
-def call_counts() -> dict[str, int]:
+def snapshot() -> list[Call]:
+    """A copy of the ledger as it stands, for comparing runs after a reset()."""
+    with _LOCK:
+        return list(CALLS)
+
+
+def call_counts(calls: list[Call] | None = None) -> dict[str, int]:
     """How many times each tool ran — the idempotency signal."""
     counts: dict[str, int] = {}
-    for c in CALLS:
+    for c in CALLS if calls is None else calls:
         counts[c.name] = counts.get(c.name, 0) + 1
     return counts
 
 
-def format_sequence() -> str:
+def format_sequence(calls: list[Call] | None = None) -> str:
     """Human-readable replay of the run."""
-    if not CALLS:
+    calls = CALLS if calls is None else calls
+    if not calls:
         return "  (no calls recorded)"
     return "\n".join(
         f"  {c.seq:>2}. {'OK  ' if c.ok else 'FAIL'} {c.name:<24} "
         f"{c.duration_ms:>6.0f}ms  {c.error or ''}"
-        for c in CALLS
+        for c in calls
     )
 
 
@@ -75,8 +93,9 @@ def traced(fn: Callable) -> Callable:
 
     @functools.wraps(fn)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        record = Call(seq=len(CALLS) + 1, name=fn.__name__)
-        CALLS.append(record)                 # append BEFORE running, so crashes
+        with _LOCK:                          # number and append as one step, so
+            record = Call(seq=len(CALLS) + 1, name=fn.__name__)
+            CALLS.append(record)             # append BEFORE running, so crashes
         log.info("-> %s", fn.__name__)       # still appear in the right position
         started = time.perf_counter()
         try:
@@ -92,3 +111,15 @@ def traced(fn: Callable) -> Callable:
         return result
 
     return wrapper
+
+
+def print_report(label: str, itinerary: str, calls: list[Call] | None = None) -> None:
+    """Print one run's itinerary and ledger. Shared so both versions and the
+    comparator format results identically — a diff should show behaviour, not
+    layout."""
+    bar = "=" * 64
+    print(f"\n{bar}\n{label}\n{bar}")
+    print(itinerary.strip() or "(no itinerary returned)")
+    print("\n--- call ledger ---")
+    print(format_sequence(calls))
+    print(f"  counts: {call_counts(calls)}")

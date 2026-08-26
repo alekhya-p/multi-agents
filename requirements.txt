@@ -1,4 +1,4 @@
-google-adk
+google-adk[extensions]
 openai-agents
 httpx
 pydantic
