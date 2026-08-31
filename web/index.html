@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trip Planner &middot; SDK Compare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#F4F6F8; --surface:#FFFFFF; --sunk:#EDF0F3;
+  --ink:#14171B; --body:#3A424C; --muted:#6B7682; --line:#DCE1E7; --hair:#E8ECF0;
+  --adk:#A8442A; --adk-soft:#F6E7E1; --adk-line:#E3C3B7;
+  --oai:#12706A; --oai-soft:#DFEFED; --oai-line:#AFD6D1;
+  --bad:#B3261E; --bad-soft:#FBE9E7;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:#101317; --surface:#181C21; --sunk:#14181D;
+    --ink:#E9EDF1; --body:#B9C2CC; --muted:#8B96A2; --line:#2A3038; --hair:#232A31;
+    --adk:#E39070; --adk-soft:#2E1D17; --adk-line:#4B2E23;
+    --oai:#5CC3B6; --oai-soft:#122725; --oai-line:#204540;
+    --bad:#F2B8B5; --bad-soft:#2C1512;
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--body);
+  font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif; font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1200px; margin:0 auto; padding:0 22px}
+h1{font-family:"IBM Plex Serif",Georgia,serif; font-size:1.6rem; font-weight:600; color:var(--ink); margin:0; letter-spacing:-.01em}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+code{font-family:"IBM Plex Mono",monospace; font-size:.92em}
+
+header{background:var(--surface); border-bottom:1px solid var(--line); padding:26px 0 22px; position:sticky; top:0; z-index:5}
+.head-row{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:16px}
+#config{font-family:"IBM Plex Mono",monospace; font-size:.74rem; color:var(--muted); margin-left:auto}
+
+form{display:flex; gap:10px; flex-wrap:wrap}
+input[type=text]{
+  flex:1 1 380px; min-width:0; padding:11px 14px; font:inherit; font-size:.95rem;
+  color:var(--ink); background:var(--ground); border:1px solid var(--line); border-radius:3px;
+}
+input[type=text]:focus-visible, button:focus-visible{outline:2px solid var(--ink); outline-offset:2px}
+button{
+  padding:11px 22px; font:inherit; font-weight:600; font-size:.9rem; cursor:pointer;
+  color:var(--ground); background:var(--ink); border:1px solid var(--ink); border-radius:3px;
+}
+button:disabled{opacity:.45; cursor:progress}
+.samples{display:flex; gap:7px; flex-wrap:wrap; margin-top:11px}
+.chip{
+  font-family:"IBM Plex Mono",monospace; font-size:.7rem; padding:4px 9px; cursor:pointer;
+  color:var(--muted); background:var(--sunk); border:1px solid var(--line); border-radius:2px;
+}
+.chip:hover{color:var(--ink); border-color:var(--muted)}
+
+main{padding:26px 0 70px}
+.status{
+  display:none; gap:12px; align-items:center; padding:14px 18px; margin-bottom:22px;
+  background:var(--surface); border:1px solid var(--line); border-radius:3px;
+  font-family:"IBM Plex Mono",monospace; font-size:.8rem; color:var(--ink);
+}
+.status.on{display:flex}
+.spin{width:13px; height:13px; border:2px solid var(--line); border-top-color:var(--ink); border-radius:50%; animation:sp .8s linear infinite; flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){ .spin{animation:none} }
+
+.diff{
+  display:none; padding:16px 20px; margin-bottom:20px; border-radius:3px;
+  background:var(--surface); border:1px solid var(--line);
+}
+.diff.on{display:block}
+.diff .t{font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+.diff .verdict{font-size:1rem; color:var(--ink); font-weight:600; margin-bottom:8px}
+.diff .rows{font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--muted); overflow-x:auto}
+.diff .rows div{white-space:nowrap}
+
+.dip{display:grid; grid-template-columns:1fr 1fr; gap:20px}
+@media (max-width:900px){ .dip{grid-template-columns:1fr} }
+.col{display:flex; flex-direction:column; gap:12px; min-width:0}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:3px; overflow:hidden}
+.card-head{display:flex; align-items:center; gap:10px; padding:11px 15px; background:var(--sunk); border-bottom:1px solid var(--line)}
+.card-head .lbl{font-family:"IBM Plex Mono",monospace; font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; font-weight:600; color:var(--ink)}
+.card-head .meta{margin-left:auto; font-family:"IBM Plex Mono",monospace; font-size:.7rem; color:var(--muted); font-variant-numeric:tabular-nums}
+.adk .card-head{border-bottom-color:var(--adk-line)} .adk .card-head .lbl{color:var(--adk)}
+.oai .card-head{border-bottom-color:var(--oai-line)} .oai .card-head .lbl{color:var(--oai)}
+
+.out{padding:19px 21px; max-height:620px; overflow-y:auto; font-size:.88rem}
+.out h3{font-family:"IBM Plex Serif",Georgia,serif; font-size:1.02rem; color:var(--ink); margin:18px 0 9px; font-weight:600}
+.out h4{font-size:.84rem; color:var(--ink); margin:16px 0 6px; font-weight:600}
+.out h3:first-child,.out h4:first-child{margin-top:0}
+.out p{margin:0 0 9px}
+.out ul{margin:0 0 10px; padding-left:19px}
+.out li{margin-bottom:4px}
+.out strong{color:var(--ink); font-weight:600}
+.out hr{border:none; border-top:1px solid var(--hair); margin:16px 0}
+.out .fail{color:var(--bad); background:var(--bad-soft); padding:12px 14px; border-radius:2px; font-family:"IBM Plex Mono",monospace; font-size:.8rem; white-space:pre-wrap}
+.out .empty{color:var(--muted); font-style:italic}
+
+.ledger{padding:4px 0}
+.row{display:grid; grid-template-columns:24px 1fr auto; gap:11px; align-items:center; padding:8px 15px; border-bottom:1px solid var(--hair)}
+.row:last-child{border-bottom:none}
+.row .n{font-family:"IBM Plex Mono",monospace; font-size:.7rem; color:var(--muted); font-variant-numeric:tabular-nums}
+.row .tool{font-family:"IBM Plex Mono",monospace; font-size:.78rem; color:var(--ink)}
+.row .ms{font-family:"IBM Plex Mono",monospace; font-size:.72rem; color:var(--muted); font-variant-numeric:tabular-nums}
+.row.bad .tool{color:var(--bad)}
+.quiet{padding:15px; font-size:.83rem; color:var(--muted)}
+.quiet b{color:var(--ink)}
+.counts{padding:9px 15px; border-top:1px solid var(--hair); font-family:"IBM Plex Mono",monospace; font-size:.72rem; color:var(--muted); overflow-x:auto; white-space:nowrap}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="head-row">
+      <span class="eyebrow">One pipeline &middot; two frameworks</span>
+      <h1>Trip Planner &mdash; SDK Compare</h1>
+      <span id="config">loading config&hellip;</span>
+    </div>
+    <form id="f">
+      <input type="text" id="prompt" value="5 days in Lisbon, I hold USD"
+             placeholder="e.g. 5 days in Amsterdam, I hold INR" autocomplete="off">
+      <button type="submit" id="go">Run both</button>
+    </form>
+    <div class="samples" id="samples"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="status" id="status"><span class="spin"></span><span id="statusText"></span></div>
+
+  <div class="diff" id="diff">
+    <div class="t">Diff</div>
+    <div class="verdict" id="verdict"></div>
+    <div class="rows" id="diffRows"></div>
+  </div>
+
+  <div class="dip">
+    <div class="col adk">
+      <div class="card">
+        <div class="card-head"><span class="lbl">Google ADK</span><span class="meta" id="adkMeta"></span></div>
+        <div class="out" id="adkOut"><p class="empty">Run a prompt to see the itinerary.</p></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="lbl">Call ledger</span><span class="meta" id="adkLedMeta"></span></div>
+        <div id="adkLedger"><div class="quiet">&mdash;</div></div>
+      </div>
+    </div>
+
+    <div class="col oai">
+      <div class="card">
+        <div class="card-head"><span class="lbl">OpenAI Agents SDK</span><span class="meta" id="oaiMeta"></span></div>
+        <div class="out" id="oaiOut"><p class="empty">Run a prompt to see the itinerary.</p></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="lbl">Call ledger</span><span class="meta" id="oaiLedMeta"></span></div>
+        <div id="oaiLedger"><div class="quiet">&mdash;</div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let TOOLS = "local";
+let COOLDOWN = 0;
+
+const SAMPLES = [
+  "5 days in Lisbon, I hold USD",
+  "5 days in Hyderabad, I hold USD",
+  "5 days in Amsterdam, I hold INR",
+  "5 days trip to Amsterdam, Paris, Berlin. I hold INR",
+];
+
+SAMPLES.forEach(s => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = s;
+  b.onclick = () => { $("prompt").value = s; };
+  $("samples").appendChild(b);
+});
+
+fetch("/api/config").then(r => r.json()).then(c => {
+  $("config").textContent = c.describe;
+  TOOLS = c.tools;
+  COOLDOWN = c.cooldown_s || 0;
+});
+
+// Minimal markdown: escape first, then only the marks the models actually emit.
+function md(src){
+  const esc = src.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const out = [];
+  let inList = false;
+  const close = () => { if (inList) { out.push("</ul>"); inList = false; } };
+
+  for (let raw of esc.split("\n")) {
+    const line = raw.trimEnd();
+    if (!line.trim()) { close(); continue; }
+    if (/^\s*(---|\*\*\*|___)\s*$/.test(line)) { close(); out.push("<hr>"); continue; }
+
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { close(); out.push(`<h${h[1].length > 3 ? 4 : 3}>${inline(h[2])}</h${h[1].length > 3 ? 4 : 3}>`); continue; }
+
+    const li = line.match(/^\s*([-*+]|\d+\.)\s+(.*)$/);
+    if (li) { if (!inList) { out.push("<ul>"); inList = true; } out.push(`<li>${inline(li[2])}</li>`); continue; }
+
+    close();
+    out.push(`<p>${inline(line)}</p>`);
+  }
+  close();
+  return out.join("");
+}
+function inline(s){
+  return s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+          .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function renderLedger(node, metaNode, calls, label){
+  metaNode.textContent = calls.length ? `${calls.length} call${calls.length === 1 ? "" : "s"}` : "";
+  if (!calls.length) {
+    node.innerHTML = TOOLS === "mcp"
+      ? `<div class="quiet"><b>Empty &mdash; and that is correct.</b> Under <code>TRIP_TOOLS=mcp</code> the
+         tools run inside the server subprocess, so <code>shared/trace.CALLS</code> fills up over there,
+         not here. Switch to <code>TRIP_TOOLS=local</code> to see the calls.</div>`
+      : `<div class="quiet">No calls recorded.</div>`;
+    return;
+  }
+  const counts = {};
+  const rows = calls.map(c => {
+    counts[c.name] = (counts[c.name] || 0) + 1;
+    return `<div class="row${c.ok ? "" : " bad"}">
+        <span class="n">${c.seq}</span>
+        <span class="tool">${c.name}${c.ok ? "" : " &mdash; " + (c.error || "failed")}</span>
+        <span class="ms">${Math.round(c.duration_ms)} ms</span>
+      </div>`;
+  }).join("");
+  node.innerHTML = `<div class="ledger">${rows}</div>
+    <div class="counts">counts: ${JSON.stringify(counts)}</div>`;
+}
+
+function renderOut(node, metaNode, side){
+  metaNode.textContent = `${(side.elapsed_ms / 1000).toFixed(1)}s`;
+  node.innerHTML = side.ok
+    ? md(side.text || "(no itinerary returned)")
+    : `<div class="fail">${side.text.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</div>`;
+}
+
+$("f").addEventListener("submit", async e => {
+  e.preventDefault();
+  const prompt = $("prompt").value.trim();
+  if (!prompt) return;
+
+  $("go").disabled = true;
+  $("status").classList.add("on");
+  $("statusText").textContent = COOLDOWN
+    ? `Running ADK, then pausing ${COOLDOWN}s for the token-per-minute window, then the OpenAI SDK…`
+    : "Running ADK, then the OpenAI SDK… (they share one global ledger, so they cannot overlap)";
+  $("diff").classList.remove("on");
+
+  try {
+    const r = await fetch("/api/run", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({prompt}),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    TOOLS = d.tools;
+    COOLDOWN = d.cooldown_s || 0;
+    $("config").textContent = d.config;
+
+    renderOut($("adkOut"), $("adkMeta"), d.adk);
+    renderOut($("oaiOut"), $("oaiMeta"), d.openai);
+    renderLedger($("adkLedger"), $("adkLedMeta"), d.adk.calls);
+    renderLedger($("oaiLedger"), $("oaiLedMeta"), d.openai.calls);
+
+    const same = JSON.stringify(d.counts.adk) === JSON.stringify(d.counts.openai);
+    $("verdict").textContent = d.adk.calls.length + d.openai.calls.length === 0
+      ? "No calls recorded on either side — tools ran in the MCP server processes."
+      : same
+        ? "Tool counts identical — neither SDK changed what the model did."
+        : "Tool counts differ — worth investigating.";
+    $("diffRows").innerHTML =
+      `<div>counts adk&nbsp;&nbsp;&nbsp; ${JSON.stringify(d.counts.adk)}</div>` +
+      `<div>counts openai ${JSON.stringify(d.counts.openai)}</div>` +
+      `<div>order&nbsp; adk&nbsp;&nbsp;&nbsp; [${d.adk.calls.map(c => c.name).join(", ")}]</div>` +
+      `<div>order&nbsp; openai [${d.openai.calls.map(c => c.name).join(", ")}]</div>`;
+    $("diff").classList.add("on");
+  } catch (err) {
+    $("statusText").textContent = `Run failed: ${err.message}. Check the terminal running webui.py.`;
+    $("go").disabled = false;
+    return;
+  }
+
+  $("status").classList.remove("on");
+  $("go").disabled = false;
+});
+</script>
+</body>
+</html>

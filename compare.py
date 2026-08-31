@@ -25,7 +25,8 @@ async def _timed(pipeline, prompt: str):
     try:
         itinerary = await pipeline(prompt)
     except Exception as exc:                 # one side failing shouldn't hide
-        itinerary = f"FAILED: {type(exc).__name__}: {exc}"
+        itinerary = f"FAILED: {trace.explain(exc)}"   # the other. explain()
+        #        digs the real cause out of ADK's TaskGroup ExceptionGroup
     return itinerary, trace.snapshot()       # the other side's ledger
 
 
@@ -36,6 +37,14 @@ async def main(prompt: str) -> None:
     print(f"config: {settings.describe()}")
 
     adk_text, adk_calls = await _timed(adk_pipeline, prompt)
+
+    # Two full pipelines inside one minute exceed Groq's 8000 tokens/min, and the
+    # 429 lands partway through the second half. See settings.COOLDOWN_SECONDS.
+    if settings.COOLDOWN_SECONDS:
+        print(f"\n(cooling down {settings.COOLDOWN_SECONDS:g}s so the second run "
+              "starts in a fresh rate-limit window)")
+        await asyncio.sleep(settings.COOLDOWN_SECONDS)
+
     openai_text, openai_calls = await _timed(openai_pipeline, prompt)
 
     trace.print_report("GOOGLE ADK", adk_text, adk_calls)

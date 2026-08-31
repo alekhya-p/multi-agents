@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -19,6 +20,16 @@ log = logging.getLogger("trip")
 
 def configure_logging(level: int = logging.INFO) -> None:
     """Readable single-line logs. Safe to call more than once."""
+    # Windows consoles default to cp1252 and raise on any character outside it —
+    # arrows, degree signs, em dashes, all of which models emit constantly. This
+    # sits ABOVE the early return below on purpose: a repeat call must still fix
+    # the streams, or a run dies in the final print after succeeding.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
     root = logging.getLogger()
     if root.handlers:          # already configured — don't double up
         return
@@ -111,6 +122,34 @@ def traced(fn: Callable) -> Callable:
         return result
 
     return wrapper
+
+
+def explain(exc: BaseException) -> str:
+    """Flatten an exception down to the messages that actually say something.
+
+    ADK's MCP session manager runs on an anyio TaskGroup, and anything that
+    fails inside one surfaces as::
+
+        ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+
+    which names no cause at all -- the real error ("timed out after 5.0s
+    waiting for the session to become ready") is a leaf inside it. Walk to the
+    leaves so a failed run reports something actionable.
+    """
+    leaves: list[str] = []
+
+    def walk(e: BaseException) -> None:
+        subs = getattr(e, "exceptions", None)
+        if subs:
+            for sub in subs:
+                walk(sub)
+        else:
+            leaves.append(f"{type(e).__name__}: {e}")
+
+    walk(exc)
+    # dict.fromkeys dedupes while keeping order -- a TaskGroup often carries the
+    # same failure several times, once per task it cancelled.
+    return " | ".join(dict.fromkeys(leaves)) or f"{type(exc).__name__}: {exc}"
 
 
 def print_report(label: str, itinerary: str, calls: list[Call] | None = None) -> None:
